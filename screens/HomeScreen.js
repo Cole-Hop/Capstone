@@ -1,12 +1,63 @@
-import * as React from 'react'; 
+import React, {useState, useEffect} from 'react'; 
 import { StatusBar } from 'expo-status-bar'; //change color for status bar icons
-import { StyleSheet, Button, Text, View, Modal, Pressable, ScrollView, TouchableOpacity  } from 'react-native'; //react native tools
+import { Image, StyleSheet, Button, Text, View, Modal, Pressable, ScrollView, TouchableOpacity  } from 'react-native'; //react native tools
+import * as ImagePicker from 'expo-image-picker';
+import {Camera, CameraType } from 'expo-camera';
 
 function HomeScreen({navigation}) {
+
+  const [image, setImage] = useState(null);
+  const [hasCameraPermission, setHasCameraPermission] = useState(null);
+  const [camera, setCamera] = useState(null);
+  const [type, setType] = useState(Camera.Constants.Type.back);
+  useEffect(() => {
+      (async () => {
+        Permissions.askAsync(Permissions.CAMERA)
+          .then(status => {
+            hasCameraPermission = status.status == "granted" ? true : false;
+          }).catch((err)=>{
+              console.log(err);
+          });
+  })();
+    }, []);
+
+  const takePicture = async () => {
+    if(camera){
+        const data = await camera.takePictureAsync(null)
+        setImage(data.uri);
+    }
+  }
+  if (hasCameraPermission === false) {
+    return <Text>No access to camera</Text>;
+  }
+
+  const pickImage = async () => {
+    // No permissions request is necessary for launching the image library
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    console.log(result);
+
+    if (!result.cancelled) {
+      setImage(result.uri);
+    }
+  };
+
     return (
         <View style={{ flex: 1, alignItems: 'center'}}>
             <StatusBar style="light"/> 
-            <Text>Home Screen</Text> 
+            <Text>Home Screen</Text>
+            <View style={styles.cameraContainer}>
+              <Camera 
+              ref={ref => setCamera(ref)}
+              style={styles.fixedRatio} 
+              type={type}
+              ratio={'1:1'} />
+            </View>
             <ScrollView style={styles.scrollView}>
                 <Text style={styles.text}>
                 Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
@@ -20,10 +71,11 @@ function HomeScreen({navigation}) {
             </ScrollView>
             <View style={styles.row}>
                 <View style={styles.buttonCam}>
-                    <Button color="#ff5c5c" title="Take Photo" onPress={() => navigation.navigate('Details')} /> 
+                    <Button color="#ff5c5c" title="Take Photo" onPress={pickImage} /> 
+                    {image && <Image source={{ uri: image }} style={{ width: 200, height: 200 }} />}
                 </View>
                 <View style={styles.buttonCam}>
-                    <Button color="#ff5c5c" title="Camera Roll" onPress={() => navigation.navigate('Details')} /> 
+                    <Button color="#ff5c5c" title="Camera Roll" onPress={takePicture} /> 
                 </View>
             </View>
         </View>

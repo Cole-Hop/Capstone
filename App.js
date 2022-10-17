@@ -28,7 +28,6 @@ function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Home">
-
         <Stack.Group>
           <Stack.Screen name="Home" component={HomeScreen} 
             options={{ title: 'ScanPox', 
