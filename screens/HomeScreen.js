@@ -1,25 +1,56 @@
-import React, {useState, useEffect} from 'react'; 
+import React, {useState, useEffect, setState} from 'react'; 
 import { StatusBar } from 'expo-status-bar'; //change color for status bar icons
 import { Image, StyleSheet, Button, Text, View, Modal, Pressable, ScrollView, TouchableOpacity  } from 'react-native'; //react native tools
 import * as ImagePicker from 'expo-image-picker';
 import {Camera, CameraType } from 'expo-camera';
 
+import AnimatedLoader from "react-native-animated-loader";
+import {bundleResourceIO, decodeJpeg} from '@tensorflow/tfjs-react-native'
+import * as tf from '@tensorflow/tfjs'
+
+const modelJSON = require('../react-model/model.json')
+const modelWeights = require('../react-model/group1-shard.bin')
+let loadertimeout = true;
+
+export const getPredictions = async (image)=>{
+  await tf.ready()
+  //const model = await loadModel() as tf.LayersModel
+  //const tensor_image = await transformImageToTensor(image)
+  //const predictions = await makePredictions(1, model, tensor_image)
+  //return predictions    
+}
+
 function HomeScreen({navigation}) {
 
+  const [isTfReady, checkTJ] = React.useState(false); //tf
+  const [isModelReady, checkMD] = React.useState(false); //model
   const [image, setImage] = useState(null);
   const [hasCameraPermission, setHasCameraPermission] = useState(null);
   const [camera, setCamera] = useState(null);
   const [type, setType] = useState(Camera.Constants.Type.back);
-  useEffect(() => {
-      (async () => {
-        Permissions.askAsync(Permissions.CAMERA)
-          .then(status => {
-            hasCameraPermission = status.status == "granted" ? true : false;
-          }).catch((err)=>{
-              console.log(err);
-          });
-  })();
-    }, []);
+
+  setTimeout(() => {
+    loadertimeout = false;
+  }, 3000)
+
+  React.useEffect(() => {
+    async () => {
+      Permissions.askAsync(Permissions.CAMERA).then(status => {hasCameraPermission = status.status == "granted" ? true : false;}).catch((err)=>{console.log(err);});
+      await tf.ready().catch((e)=>{console.log("[Loading Error] info:", e)})
+      checkTJ(true)
+
+    }
+  }, []);
+
+  const loadModel = async()=>{
+    //.ts: const loadModel = async ():Promise<void|tf.LayersModel>=>{
+        const model = await tf.loadLayersModel(
+            bundleResourceIO(modelJSON, modelWeights)
+        ).catch((e)=>{
+          console.log("[LOADING ERROR] info:",e)
+        })
+        return model
+  }
 
   const takePicture = async () => {
     if(camera){
@@ -47,10 +78,19 @@ function HomeScreen({navigation}) {
     }
   };
 
-    return (
+    return(
         <View style={{ flex: 1, alignItems: 'center'}}>
             <StatusBar style="light"/> 
-            <Text>Home Screen</Text>
+            <AnimatedLoader
+              visible={false}
+              overlayColor="rgba(255,255,255,0)"
+              source={require("../assets/loaders/loadplane.json")}
+              animationStyle={styles.lottie}
+              speed={0.5}>
+            </AnimatedLoader> 
+            <Text> TFJS Ready? 
+              {isTfReady ? <Text>Yes</Text> : ''}
+            </Text>
             <View style={styles.cameraContainer}>
               <Camera 
               ref={ref => setCamera(ref)}
@@ -80,6 +120,7 @@ function HomeScreen({navigation}) {
             </View>
         </View>
     );
+  
 }
 
 export default HomeScreen;
